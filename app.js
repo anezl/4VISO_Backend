@@ -7,7 +7,10 @@ app.use(cors());
 app.use(express.json());
 
 // routes
+const healthRoutes = require("./routes/health");
 const authRoutes = require("./routes/auth");
+
+app.use("/health", healthRoutes);
 app.use("/auth", authRoutes);
 
 module.exports = app;
