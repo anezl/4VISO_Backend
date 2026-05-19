@@ -1,8 +1,10 @@
 const express = require("express");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
+const mongoose = require("mongoose");
 
 const { getJwtSecret, requireAuth } = require("../middleware/auth");
+const Company = require("../models/Company");
 const User = require("../models/User");
 
 const router = express.Router();
@@ -35,6 +37,24 @@ const normalizeEmail = (email = "") => email.trim().toLowerCase();
 
 const isValidPassword = (password = "") => password.length >= 8;
 
+const resolveCompanyId = async (companyId) => {
+  if (!companyId) {
+    return null;
+  }
+
+  if (!mongoose.Types.ObjectId.isValid(companyId)) {
+    return { error: "Company id is invalid" };
+  }
+
+  const company = await Company.findById(companyId);
+
+  if (!company) {
+    return { error: "Company not found" };
+  }
+
+  return company._id;
+};
+
 // =========================
 // REGISTER
 // =========================
@@ -66,6 +86,12 @@ router.post("/register", async (req, res) => {
       return res.status(400).json({ message: "Role is invalid" });
     }
 
+    const resolvedCompanyId = await resolveCompanyId(company_id);
+
+    if (resolvedCompanyId?.error) {
+      return res.status(400).json({ message: resolvedCompanyId.error });
+    }
+
     const existingUser = await User.findOne({ email: normalizedEmail });
 
     if (existingUser) {
@@ -74,7 +100,7 @@ router.post("/register", async (req, res) => {
 
     const passwordHash = await bcrypt.hash(password, 12);
     const user = await User.create({
-      company_id: company_id || null,
+      company_id: resolvedCompanyId,
       name,
       email: normalizedEmail,
       password_hash: passwordHash,
