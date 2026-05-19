@@ -16,12 +16,65 @@ const publicCertification = (certification) => ({
 const normalizeCode = (code = "") => code.trim().toUpperCase();
 const isValidObjectId = (id) => mongoose.Types.ObjectId.isValid(id);
 
+const defaultCertifications = [
+  {
+    code: "GDP",
+    name: "Good Distribution Practice",
+    description: "Pharmaceutical distribution quality standard for storage and transportation.",
+  },
+  {
+    code: "IATA",
+    name: "IATA Temperature Control Regulations",
+    description: "Air transport requirements for temperature-sensitive healthcare shipments.",
+  },
+  {
+    code: "ISO9001",
+    name: "ISO 9001",
+    description: "Quality management system certification.",
+  },
+  {
+    code: "ISO13485",
+    name: "ISO 13485",
+    description: "Quality management certification for medical devices.",
+  },
+  {
+    code: "ISO28000",
+    name: "ISO 28000",
+    description: "Security management standard for supply chains.",
+  },
+];
+
 router.get("/", requireAuth, async (req, res) => {
   const certifications = await Certification.find().sort({ code: 1 });
 
   res.json({
     certifications: certifications.map(publicCertification),
   });
+});
+
+router.post("/seed-defaults", requireAuth, async (req, res) => {
+  try {
+    const operations = defaultCertifications.map((certification) => ({
+      updateOne: {
+        filter: { code: certification.code },
+        update: { $set: certification },
+        upsert: true,
+      },
+    }));
+
+    await Certification.bulkWrite(operations);
+
+    const certifications = await Certification.find({
+      code: { $in: defaultCertifications.map((certification) => certification.code) },
+    }).sort({ code: 1 });
+
+    return res.json({
+      message: "Default certifications are ready",
+      certifications: certifications.map(publicCertification),
+    });
+  } catch (error) {
+    return res.status(500).json({ message: "Default certification seeding failed" });
+  }
 });
 
 router.post("/", requireAuth, async (req, res) => {
