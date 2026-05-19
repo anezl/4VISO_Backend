@@ -9,6 +9,8 @@ Create `backend/.env` from `.env.example`:
 ```env
 PORT=3000
 MONGO_URI=mongodb+srv://<username>:<password>@<cluster-url>/4viso-dev?retryWrites=true&w=majority&appName=<app-name>
+JWT_SECRET=replace-with-a-long-random-secret
+JWT_EXPIRES_IN=7d
 ```
 
 `4viso-dev` is the development database name. MongoDB creates it automatically after the first document is written.
