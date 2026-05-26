@@ -1,6 +1,9 @@
 const express = require('express');
 const router = express.Router();
 const Lane = require('../models/Lane');
+const { requireAuth } = require('../middleware/auth');
+
+router.use(requireAuth);
 
 // POST /lanes — create a new lane
 router.post('/', async (req, res) => {
