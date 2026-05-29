@@ -11,7 +11,6 @@ router.post('/', async (req, res) => {
     const lane = new Lane({
       ...req.body,
       owner: req.user._id,
-      companyName: req.user.companyName,
       status: 'draft'
     });
     await lane.save();
@@ -22,9 +21,17 @@ router.post('/', async (req, res) => {
 });
 
 // GET /lanes — get all lanes for logged-in user
+// Supports ?status=draft|pending|live|archived and ?riskLevel=low|medium|high
 router.get('/', async (req, res) => {
   try {
-    const lanes = await Lane.find({ owner: req.user._id });
+    const filter = { owner: req.user._id };
+    const validStatuses  = ['draft', 'pending', 'live', 'archived'];
+    const validRiskLevels = ['low', 'medium', 'high'];
+    if (req.query.status    && validStatuses.includes(req.query.status))
+      filter.status    = req.query.status;
+    if (req.query.riskLevel && validRiskLevels.includes(req.query.riskLevel))
+      filter.riskLevel = req.query.riskLevel;
+    const lanes = await Lane.find(filter).sort({ createdAt: -1 });
     res.json(lanes);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -45,9 +52,10 @@ router.get('/:id', async (req, res) => {
 // PUT /lanes/:id — update a lane
 router.put('/:id', async (req, res) => {
   try {
+    const { owner, _id, __v, ...allowedFields } = req.body;
     const lane = await Lane.findOneAndUpdate(
       { _id: req.params.id, owner: req.user._id },
-      req.body,
+      allowedFields,
       { new: true }
     );
     if (!lane) return res.status(404).json({ error: 'Lane not found' });
