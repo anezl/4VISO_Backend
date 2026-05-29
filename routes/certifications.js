@@ -53,6 +53,9 @@ router.get("/", requireAuth, async (req, res) => {
 });
 
 router.post("/seed-defaults", requireAuth, async (req, res) => {
+  if (req.user.role !== "admin") {
+    return res.status(403).json({ message: "Admin access required" });
+  }
   try {
     const operations = defaultCertifications.map((certification) => ({
       updateOne: {
