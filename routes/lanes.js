@@ -88,4 +88,35 @@ router.delete('/:id', async (req, res) => {
   }
 });
 
+// POST /lanes/:id/report — owner submits the lane for review
+router.post('/:id/report', async (req, res) => {
+  try {
+    const lane = await Lane.findOne({ _id: req.params.id, owner: req.user._id });
+    if (!lane) return res.status(404).json({ error: 'Lane not found' });
+    lane.status = 'pending';
+    lane.reportStatus = 'pending';
+    await lane.save();
+    res.json(lane);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /lanes/:id/approve — admin approves a submitted lane
+router.post('/:id/approve', async (req, res) => {
+  try {
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ error: 'Admin access required' });
+    }
+    const lane = await Lane.findById(req.params.id);
+    if (!lane) return res.status(404).json({ error: 'Lane not found' });
+    lane.status = 'live';
+    lane.reportStatus = 'live';
+    await lane.save();
+    res.json(lane);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;
