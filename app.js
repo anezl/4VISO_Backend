@@ -3,7 +3,21 @@ const cors = require("cors");
 
 const app = express();
 
-app.use(cors());
+// Whitelist the Vite dev server. Override in production via CORS_ORIGINS (comma-separated).
+const allowedOrigins = (process.env.CORS_ORIGINS || 'http://localhost:5173,http://127.0.0.1:5173')
+  .split(',')
+  .map((origin) => origin.trim());
+
+app.use(
+  cors({
+    origin(origin, callback) {
+      // Allow tools with no Origin header (Postman, curl, server-to-server).
+      if (!origin || allowedOrigins.includes(origin)) return callback(null, true);
+      return callback(new Error(`Origin ${origin} not allowed by CORS`));
+    },
+    credentials: true,
+  })
+);
 app.use(express.json());
 
 // routes

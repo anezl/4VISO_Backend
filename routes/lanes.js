@@ -5,6 +5,14 @@ const { requireAuth } = require('../middleware/auth');
 
 router.use(requireAuth);
 
+// Recalculate a lane's risk from its nodes.
+// Rule (from PROJECT_PLAN): no nodes = high, every node backed up = low, otherwise medium.
+function computeRiskLevel(nodes = []) {
+  if (!nodes || nodes.length === 0) return 'high';
+  const everyNodeBackedUp = nodes.every((node) => node.isBackup === true);
+  return everyNodeBackedUp ? 'low' : 'medium';
+}
+
 // POST /lanes — create a new lane
 router.post('/', async (req, res) => {
   try {
@@ -13,6 +21,7 @@ router.post('/', async (req, res) => {
       owner: req.user._id,
       status: 'draft'
     });
+    lane.riskLevel = computeRiskLevel(lane.nodes);
     await lane.save();
     res.status(201).json(lane);
   } catch (err) {
@@ -52,19 +61,22 @@ router.get('/:id', async (req, res) => {
 // PUT /lanes/:id — update a lane
 router.put('/:id', async (req, res) => {
   try {
-    const { owner, _id, __v, ...allowedFields } = req.body;
-    const lane = await Lane.findOneAndUpdate(
-      { _id: req.params.id, owner: req.user._id },
-      allowedFields,
-      { new: true }
-    );
+    const lane = await Lane.findOne({ _id: req.params.id, owner: req.user._id });
     if (!lane) return res.status(404).json({ error: 'Lane not found' });
+
+    // Never let the client overwrite these.
+    const { owner, _id, __v, ...allowedFields } = req.body;
+    Object.assign(lane, allowedFields);
+
+    // Always recompute risk from the final node list.
+    lane.riskLevel = computeRiskLevel(lane.nodes);
+
+    await lane.save();
     res.json(lane);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
-
 // DELETE /lanes/:id — delete a lane
 router.delete('/:id', async (req, res) => {
   try {
