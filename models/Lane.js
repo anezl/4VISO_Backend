@@ -12,6 +12,12 @@ const endpointSchema = new mongoose.Schema({
   company: { type: String },
 }, { _id: false });
 
+const backupSchema = new mongoose.Schema({
+  location:      { type: String },
+  company:       { type: String },
+  transportType: { type: String },
+}, { _id: false });
+
 const nodeSchema = new mongoose.Schema({
   location:           { type: String },
   company:            { type: String },
@@ -21,7 +27,7 @@ const nodeSchema = new mongoose.Schema({
   validationStatus:   { type: String, enum: ['validated', 'pending', 'not_validated'], default: 'pending' },
   temperatureControl: { type: temperatureSchema, default: null },
   fragile:            { type: Boolean, default: false },
-  isBackup:           { type: Boolean, default: false },
+  backups:            [backupSchema],
 });
 
 const laneSchema = new mongoose.Schema(

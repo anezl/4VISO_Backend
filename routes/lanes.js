@@ -5,12 +5,14 @@ const { requireAuth } = require('../middleware/auth');
 
 router.use(requireAuth);
 
-// Recalculate a lane's risk from its nodes.
-// Rule (from PROJECT_PLAN): no nodes = high, every node backed up = low, otherwise medium.
+// Recalculate a lane's risk from its intermediary nodes and their backups.
+// Rule: no stops = high, every stop has ≥1 backup = low, some stops backed up = medium, none = high.
 function computeRiskLevel(nodes = []) {
-  if (!nodes || nodes.length === 0) return 'high';
-  const everyNodeBackedUp = nodes.every((node) => node.isBackup === true);
-  return everyNodeBackedUp ? 'low' : 'medium';
+  if (!nodes || nodes.length <= 2) return 'high';
+  const intermediaries = nodes.slice(1, -1);
+  if (intermediaries.every(n => n.backups && n.backups.length > 0)) return 'low';
+  if (intermediaries.some(n => n.backups && n.backups.length > 0)) return 'medium';
+  return 'high';
 }
 
 // POST /lanes — create a new lane
